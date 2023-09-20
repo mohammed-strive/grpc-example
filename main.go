@@ -44,9 +44,11 @@ func main() {
 	}
 
 	storeClient := clients.NewMongoClient(client)
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
-		Store: storeClient,
-	}}))
+	srv := handler.NewDefaultServer(
+		graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
+			Store: storeClient,
+		}}),
+	)
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
