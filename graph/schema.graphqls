@@ -1,0 +1,26 @@
+# GraphQL example
+
+type Book {
+  id: ID!
+  title: String!
+  author: String!
+  isbn: String!
+  summary: String!
+}
+
+input BookInput {
+  title: String
+  author: String
+  isbn: String
+  summary: String
+}
+
+type Query {
+  getBook(id: ID!): Book!
+}
+
+type Mutation {
+  createBook(book: BookInput!): Book!
+  updateBook(book: BookInput!): Book!
+  deleteBook(book: BookInput!): Boolean!
+}
