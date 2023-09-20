@@ -1,0 +1,30 @@
+syntax = "proto3";
+option go_package = "aeon_grpc/grpc";
+
+message Book {
+  int32 id = 1;
+  string title = 2;
+  string author = 3;
+  string isbn = 4;
+  string summary = 5;
+} 
+
+message GetBookRequest {
+  string id = 1;
+}
+
+message DeleteBookRequest {
+  string id = 1;
+}
+
+message DeleteBookResponse {
+  bool deleted = 1; 
+}
+
+service BookService {
+  rpc GetBook(GetBookRequest) returns (Book) {};
+  rpc CreateBook(Book) returns (Book) {};
+  rpc UpdateBook(Book) returns (Book) {};
+  rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {};
+}
+

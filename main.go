@@ -3,8 +3,13 @@ package main
 import (
 	"aeon-grpc/clients"
 	"aeon-grpc/graph"
+	"aeon-grpc/graph/model"
+	pb "aeon-grpc/grpc"
+	"aeon-grpc/interfaces"
 	"context"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -13,9 +18,11 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"google.golang.org/grpc"
 )
 
-const defaultPort = "8080"
+const defaultGqlPort = "8080"
+const defaultGrpcServerPort = "50051"
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -40,7 +47,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = defaultPort
+		port = defaultGqlPort
 	}
 
 	storeClient := clients.NewMongoClient(client)
@@ -50,9 +57,31 @@ func main() {
 		}}),
 	)
 
+	// listen, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", defaultGrpcServerPort))
+	// if err != nil {
+	// 	log.Fatalf("unable to connect to tcp port %s: %v", defaultGrpcServerPort, err)
+	// }
+
+	// startGrpcServer(storeClient, listen)
+
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func startGrpcServer(storeClient interfaces.StoreClient[model.Book], listen net.Listener) {
+	grpcServer := grpc.NewServer()
+	pb.RegisterBookServiceServer(grpcServer, clients.NewGrpcServer(storeClient))
+	grpcServer.Serve(listen)
+}
+
+func startGrpcClient() pb.BookServiceClient {
+	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", defaultGrpcServerPort))
+	if err != nil {
+		log.Fatalf("error dailing %s: %v", defaultGrpcServerPort, err)
+	}
+
+	return pb.NewBookServiceClient(conn)
 }

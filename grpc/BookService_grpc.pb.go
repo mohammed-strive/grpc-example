@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v4.24.3
-// source: protos/Books.proto
+// source: BookService.proto
 
-package protos
+package grpc
 
 import (
 	context "context"
@@ -25,7 +25,7 @@ type BookServiceClient interface {
 	GetBook(ctx context.Context, in *GetBookRequest, opts ...grpc.CallOption) (*Book, error)
 	CreateBook(ctx context.Context, in *Book, opts ...grpc.CallOption) (*Book, error)
 	UpdateBook(ctx context.Context, in *Book, opts ...grpc.CallOption) (*Book, error)
-	DeleteBook(ctx context.Context, in *Book, opts ...grpc.CallOption) (*DeleteBookResponse, error)
+	DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*DeleteBookResponse, error)
 }
 
 type bookServiceClient struct {
@@ -63,7 +63,7 @@ func (c *bookServiceClient) UpdateBook(ctx context.Context, in *Book, opts ...gr
 	return out, nil
 }
 
-func (c *bookServiceClient) DeleteBook(ctx context.Context, in *Book, opts ...grpc.CallOption) (*DeleteBookResponse, error) {
+func (c *bookServiceClient) DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*DeleteBookResponse, error) {
 	out := new(DeleteBookResponse)
 	err := c.cc.Invoke(ctx, "/BookService/DeleteBook", in, out, opts...)
 	if err != nil {
@@ -79,7 +79,7 @@ type BookServiceServer interface {
 	GetBook(context.Context, *GetBookRequest) (*Book, error)
 	CreateBook(context.Context, *Book) (*Book, error)
 	UpdateBook(context.Context, *Book) (*Book, error)
-	DeleteBook(context.Context, *Book) (*DeleteBookResponse, error)
+	DeleteBook(context.Context, *DeleteBookRequest) (*DeleteBookResponse, error)
 	mustEmbedUnimplementedBookServiceServer()
 }
 
@@ -96,7 +96,7 @@ func (UnimplementedBookServiceServer) CreateBook(context.Context, *Book) (*Book,
 func (UnimplementedBookServiceServer) UpdateBook(context.Context, *Book) (*Book, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateBook not implemented")
 }
-func (UnimplementedBookServiceServer) DeleteBook(context.Context, *Book) (*DeleteBookResponse, error) {
+func (UnimplementedBookServiceServer) DeleteBook(context.Context, *DeleteBookRequest) (*DeleteBookResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteBook not implemented")
 }
 func (UnimplementedBookServiceServer) mustEmbedUnimplementedBookServiceServer() {}
@@ -167,7 +167,7 @@ func _BookService_UpdateBook_Handler(srv interface{}, ctx context.Context, dec f
 }
 
 func _BookService_DeleteBook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Book)
+	in := new(DeleteBookRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -179,7 +179,7 @@ func _BookService_DeleteBook_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/BookService/DeleteBook",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BookServiceServer).DeleteBook(ctx, req.(*Book))
+		return srv.(BookServiceServer).DeleteBook(ctx, req.(*DeleteBookRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -209,5 +209,5 @@ var BookService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "protos/Books.proto",
+	Metadata: "BookService.proto",
 }
