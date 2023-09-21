@@ -6,64 +6,93 @@ package graph
 
 import (
 	"aeon-grpc/graph/model"
+	"aeon-grpc/grpc"
 	"context"
 	"fmt"
+	"math"
+	"math/rand"
 )
 
 // CreateBook is the resolver for the createBook field.
 func (r *mutationResolver) CreateBook(ctx context.Context, book model.BookInput) (*model.Book, error) {
-	newBook := model.Book{
-		ID:      *book.Isbn,
+	var nb model.Book
+
+	newBook := grpc.Book{
+		Id:      int32(rand.Intn(math.MaxInt32)),
 		Title:   *book.Title,
 		Author:  *book.Author,
 		Summary: *book.Summary,
 		Isbn:    *book.Isbn,
 	}
-	newBook, err := r.Resolver.Store.CreateItem(newBook)
+	res, err := r.GqlClient.CreateBook(ctx, &newBook)
 	if err != nil {
-		return &newBook, fmt.Errorf("error creating new book: %v", err)
+		return &nb, fmt.Errorf("error creating new book: %v", err)
 	}
+	nb.Author = res.Author
+	nb.Title = res.Title
+	nb.Isbn = res.Isbn
+	nb.Summary = res.Summary
+	nb.ID = string(res.Id)
 
-	return &newBook, nil
+	return &nb, nil
 }
 
 // UpdateBook is the resolver for the updateBook field.
 func (r *mutationResolver) UpdateBook(ctx context.Context, book model.BookInput) (*model.Book, error) {
+	var nb model.Book
 
-	newBook := model.Book{
-		ID:      *book.Isbn,
+	newBook := grpc.Book{
 		Title:   *book.Title,
 		Author:  *book.Author,
 		Summary: *book.Summary,
 		Isbn:    *book.Isbn,
 	}
-	newBook, err := r.Store.UpdateItem(*book.Isbn, newBook)
+	res, err := r.GqlClient.UpdateBook(ctx, &newBook)
 	if err != nil {
-		return &newBook, fmt.Errorf("error creating new book: %v", err)
+		return &nb, fmt.Errorf("error creating new book: %v", err)
 	}
+	nb.Author = res.Author
+	nb.Title = res.Title
+	nb.Isbn = res.Isbn
+	nb.Summary = res.Summary
+	nb.ID = string(res.Id)
 
-	return &newBook, nil
+	return &nb, nil
 }
 
 // DeleteBook is the resolver for the deleteBook field.
 func (r *mutationResolver) DeleteBook(ctx context.Context, book model.BookInput) (bool, error) {
 	key := *book.Isbn
-	err := r.Store.DeleteItem(key)
+	deleteBookRequest := grpc.DeleteBookRequest{
+		Id: key,
+	}
+	res, err := r.GqlClient.DeleteBook(ctx, &deleteBookRequest)
 	if err != nil {
 		return false, fmt.Errorf("error deleting book; %v", err)
 	}
 
-	return true, nil
+	return res.Deleted, nil
 }
 
 // GetBook is the resolver for the getBook field.
 func (r *queryResolver) GetBook(ctx context.Context, id string) (*model.Book, error) {
-	res, err := r.Store.GetItem(id)
+	getBookRequest := grpc.GetBookRequest{
+		Id: id,
+	}
+	res, err := r.GqlClient.GetBook(ctx, &getBookRequest)
 	if err != nil {
 		return &model.Book{}, fmt.Errorf("error getting book: %v", err)
 	}
 
-	return &res, nil
+	book := model.Book{
+		ID:      string(res.Id),
+		Author:  res.Author,
+		Summary: res.Summary,
+		Title:   res.Title,
+		Isbn:    res.Isbn,
+	}
+
+	return &book, nil
 }
 
 // Mutation returns MutationResolver implementation.

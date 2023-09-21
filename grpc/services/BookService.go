@@ -1,4 +1,4 @@
-package clients
+package services
 
 import (
 	"aeon-grpc/graph/model"
@@ -7,18 +7,18 @@ import (
 	"context"
 )
 
-type grpcServer struct {
+type bookService struct {
 	grpc.UnimplementedBookServiceServer
 	dbClient interfaces.StoreClient[model.Book]
 }
 
 // mustEmbedUnimplementedBookServiceServer implements grpc.BookServiceServer.
-func (g grpcServer) mustEmbedUnimplementedBookServiceServer() {
+func (b bookService) mustEmbedUnimplementedBookServiceServer() {
 	panic("unimplemented")
 }
 
 // CreateBook implements grpc.BookServiceServer.
-func (g grpcServer) CreateBook(ctx context.Context, book *grpc.Book) (*grpc.Book, error) {
+func (b bookService) CreateBook(ctx context.Context, book *grpc.Book) (*grpc.Book, error) {
 	newBook := model.Book{
 		Isbn:    book.Isbn,
 		Title:   book.Title,
@@ -26,7 +26,7 @@ func (g grpcServer) CreateBook(ctx context.Context, book *grpc.Book) (*grpc.Book
 		Summary: book.Summary,
 	}
 
-	_, err := g.dbClient.CreateItem(newBook)
+	_, err := b.dbClient.CreateItem(newBook)
 	if err != nil {
 		return book, err
 	}
@@ -35,12 +35,12 @@ func (g grpcServer) CreateBook(ctx context.Context, book *grpc.Book) (*grpc.Book
 }
 
 // DeleteBook implements grpc.BookServiceServer.
-func (g grpcServer) DeleteBook(ctx context.Context, bookId *grpc.DeleteBookRequest) (*grpc.DeleteBookResponse, error) {
+func (b bookService) DeleteBook(ctx context.Context, bookId *grpc.DeleteBookRequest) (*grpc.DeleteBookResponse, error) {
 	key := bookId.GetId()
 	var resp grpc.DeleteBookResponse
 	resp.Deleted = false
 
-	err := g.dbClient.DeleteItem(key)
+	err := b.dbClient.DeleteItem(key)
 	if err != nil {
 		return &resp, err
 	}
@@ -49,12 +49,12 @@ func (g grpcServer) DeleteBook(ctx context.Context, bookId *grpc.DeleteBookReque
 }
 
 // GetBook implements grpc.BookServiceServer.
-func (g grpcServer) GetBook(ctx context.Context, bookId *grpc.GetBookRequest) (*grpc.Book, error) {
+func (b bookService) GetBook(ctx context.Context, bookId *grpc.GetBookRequest) (*grpc.Book, error) {
 	var book grpc.Book
 
 	key := bookId.GetId()
 
-	res, err := g.dbClient.GetItem(key)
+	res, err := b.dbClient.GetItem(key)
 	if err != nil {
 		return &book, err
 	}
@@ -67,7 +67,7 @@ func (g grpcServer) GetBook(ctx context.Context, bookId *grpc.GetBookRequest) (*
 }
 
 // UpdateBook implements grpc.BookServiceServer.
-func (g grpcServer) UpdateBook(ctx context.Context, book *grpc.Book) (*grpc.Book, error) {
+func (b bookService) UpdateBook(ctx context.Context, book *grpc.Book) (*grpc.Book, error) {
 	updatedBook := model.Book{
 		ID:      string(book.Id),
 		Title:   book.Title,
@@ -75,7 +75,7 @@ func (g grpcServer) UpdateBook(ctx context.Context, book *grpc.Book) (*grpc.Book
 		Isbn:    book.Isbn,
 		Summary: book.Summary,
 	}
-	_, err := g.dbClient.UpdateItem(updatedBook.Isbn, updatedBook)
+	_, err := b.dbClient.UpdateItem(updatedBook.Isbn, updatedBook)
 	if err != nil {
 		return book, err
 	}
@@ -83,8 +83,8 @@ func (g grpcServer) UpdateBook(ctx context.Context, book *grpc.Book) (*grpc.Book
 	return book, nil
 }
 
-func NewGrpcServer(dbClient interfaces.StoreClient[model.Book]) grpc.BookServiceServer {
-	return grpcServer{
+func NewGrpcBookService(dbClient interfaces.StoreClient[model.Book]) grpc.BookServiceServer {
+	return bookService{
 		dbClient: dbClient,
 	}
 }

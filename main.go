@@ -2,14 +2,14 @@ package main
 
 import (
 	"aeon-grpc/clients"
+	"aeon-grpc/constants"
 	"aeon-grpc/graph"
-	"aeon-grpc/graph/model"
 	pb "aeon-grpc/grpc"
-	"aeon-grpc/interfaces"
+	gclient "aeon-grpc/grpc/client"
+	"aeon-grpc/grpc/server"
 	"context"
-	"fmt"
+	"flag"
 	"log"
-	"net"
 	"net/http"
 	"os"
 
@@ -18,13 +18,19 @@ import (
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"google.golang.org/grpc"
 )
 
-const defaultGqlPort = "8080"
-const defaultGrpcServerPort = "50051"
+var (
+	tls                = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
+	certFile           = flag.String("cert_file", "", "The TLS cert file")
+	keyFile            = flag.String("key_file", "", "The TLS key file")
+	address            = flag.String("port", "localhost:50051", "The server port")
+	serverHostOverride = flag.String("server_host_override", "x.test.example.com", "The server name used to verify the hostname returned by the TLS handshake")
+)
 
 func main() {
+	flag.Parse()
+
 	if err := godotenv.Load(); err != nil {
 		log.Println("Could not find .env file")
 	}
@@ -47,41 +53,25 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = defaultGqlPort
+		port = constants.DefaultMongoPort
 	}
+
+	grpcClient := gclient.CreateGrpcClient(*certFile, *serverHostOverride, *address, *tls)
+	defer grpcClient.Close()
+	bookServiceClient := pb.NewBookServiceClient(grpcClient)
 
 	storeClient := clients.NewMongoClient(client)
 	srv := handler.NewDefaultServer(
 		graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
-			Store: storeClient,
+			GqlClient: bookServiceClient,
 		}}),
 	)
 
-	// listen, err := net.Listen("tcp", fmt.Sprintf("localhost:%s", defaultGrpcServerPort))
-	// if err != nil {
-	// 	log.Fatalf("unable to connect to tcp port %s: %v", defaultGrpcServerPort, err)
-	// }
-
-	// startGrpcServer(storeClient, listen)
+	go server.StartGrpcServer(*tls, *address, *certFile, *keyFile, storeClient)
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
-}
-
-func startGrpcServer(storeClient interfaces.StoreClient[model.Book], listen net.Listener) {
-	grpcServer := grpc.NewServer()
-	pb.RegisterBookServiceServer(grpcServer, clients.NewGrpcServer(storeClient))
-	grpcServer.Serve(listen)
-}
-
-func startGrpcClient() pb.BookServiceClient {
-	conn, err := grpc.Dial(fmt.Sprintf("localhost:%s", defaultGrpcServerPort))
-	if err != nil {
-		log.Fatalf("error dailing %s: %v", defaultGrpcServerPort, err)
-	}
-
-	return pb.NewBookServiceClient(conn)
 }
