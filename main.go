@@ -25,7 +25,11 @@ var (
 	certFile           = flag.String("cert_file", "", "The TLS cert file")
 	keyFile            = flag.String("key_file", "", "The TLS key file")
 	address            = flag.String("port", "localhost:50051", "The server port")
-	serverHostOverride = flag.String("server_host_override", "x.test.example.com", "The server name used to verify the hostname returned by the TLS handshake")
+	serverHostOverride = flag.String(
+		"server_host_override",
+		"x.test.example.com",
+		"The server name used to verify the hostname returned by the TLS handshake",
+	)
 )
 
 func main() {
